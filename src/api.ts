@@ -47,11 +47,11 @@ export async function api<T>(connection: Connection, path: string, method = 'GET
       signal: AbortSignal.timeout?.(22000),
     });
   } catch {
-    throw new RequestError('Could not reach your server. Check your connection and try again.', 0);
+    throw new RequestError('Couldn’t reach your server. Check your connection and try again.', 0);
   }
   if (response.status === 204) return undefined as T;
   const data = await response.json().catch(() => null);
-  if (!response.ok) throw new RequestError(data?.message ?? data?.hint ?? 'That change could not be saved.', response.status);
+  if (!response.ok) throw new RequestError(data?.message ?? data?.hint ?? 'Couldn’t save that change.', response.status);
   return data as T;
 }
 
@@ -98,7 +98,7 @@ export function enqueue(connection: Connection, path: string, method: string, bo
       return rejected[0] ?? 'Saved';
     } catch (error) {
       if (error instanceof RequestError && error.status === 401) throw error;
-      return 'Saved on this device. It will sync when the server is available.';
+      return 'Saved on this device. It’ll sync when your server is reachable.';
     }
   });
 }

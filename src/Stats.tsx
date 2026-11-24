@@ -56,7 +56,7 @@ export default function Stats({
       <Card style={{ gap: 16 }}>
         <CalorieWeek stats={stats} />
         {!hasCalorieDays && (
-          <T variant="caption" tone="faint" align="center">Log a meal to start the week’s balance.</T>
+          <T variant="caption" tone="faint" align="center">Log a meal to start tracking your week.</T>
         )}
         <View style={{ flexDirection: 'row', gap: 10 }}>
           <SummaryTile label="Average" value={hasCalorieDays ? calorie.average.toLocaleString('en-IN') : '—'} hint="kcal/day" />
@@ -83,7 +83,7 @@ export default function Stats({
         <T variant="meta" tone="muted">
           {points.possible - points.earned > 0
             ? `${points.possible - points.earned} points were still on the table this week.`
-            : 'Every point on the table, taken. That is a clean week.'}
+            : 'Every point earned. Clean week.'}
         </T>
       </Card>
 
@@ -121,7 +121,7 @@ export default function Stats({
             <IconTile component={Scale} size={38} bg={c.white} color={c.primary} />
             <View style={{ flex: 1, gap: 2 }}>
               <T variant="bodyStrong">One number, once a day</T>
-              <T variant="meta" tone="muted">Morning, after the loo, before chai. That is the cleanest read.</T>
+              <T variant="meta" tone="muted">Morning, after the loo, before chai. That’s the cleanest read.</T>
             </View>
           </View>
         )}
@@ -151,7 +151,7 @@ export default function Stats({
         <Card style={{ alignItems: 'center', gap: 10, paddingVertical: 26 }}>
           <IconTile name="sparkles" size={42} />
           <T variant="bodyStrong">Nothing logged yet</T>
-          <T variant="meta" tone="muted" align="center">Your meals, workouts and quest marks will collect here.</T>
+          <T variant="meta" tone="muted" align="center">Meals, workouts and quest check-ins will show up here.</T>
         </Card>
       ) : (
         <Card padded={false} style={{ overflow: 'hidden' }}>

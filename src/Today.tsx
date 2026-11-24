@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 import Animated, { FadeInDown, ReduceMotion } from 'react-native-reanimated';
-import { Check, ChevronRight, Flame, Sparkles } from 'lucide-react-native';
+import { Check, ChevronRight, Flame } from 'lucide-react-native';
 import { c, font, mealPalette, questPalette } from './theme';
 import { iconForQuest } from './icons';
 import {
@@ -30,7 +30,7 @@ export function phaseFor(clock: string) {
 const phaseCopy = {
   morning: 'Morning. Easy start today.',
   midday: 'Midday check-in.',
-  evening: 'Evening stretch.',
+  evening: 'Home stretch.',
   night: 'Winding down.'
 } as const;
 
@@ -116,7 +116,7 @@ function BudgetCard({ day }: { day: Day }) {
           <T variant="caption" style={{ color: c.warningInk }}>
             {budget.walk_hint
               ? `A ${budget.walk_hint}-min walk brings you back into range.`
-              : 'Logged and done. A fresh budget starts tomorrow.'}
+              : 'Logged and done. Fresh budget tomorrow.'}
           </T>
         </View>
       )}
@@ -136,7 +136,7 @@ function Macro({ label, value, target, color }: { label: string; value: number; 
 }
 
 export default function Today({
-  day, clock, onCheck, onWorkout, onMeal, onQuest, onRecap
+  day, clock, onCheck, onWorkout, onMeal, onQuest
 }: {
   day: Day;
   clock: string;
@@ -144,12 +144,41 @@ export default function Today({
   onWorkout: (walk?: boolean) => void;
   onMeal: (type: string) => void;
   onQuest: (quest: Quest) => void;
-  onRecap: (date: string) => void;
 }) {
   const phase = phaseFor(clock);
   const focus = focusByPhase[phase]
     .map((key) => day.quests.find((quest) => quest.key === key))
     .find((quest) => quest && !doneStates.includes(quest.state) && quest.state !== 'later');
+  const startsOn = day.profile.journey_start_date;
+  const restDay = !!startsOn && day.date < startsOn;
+
+  if (restDay) {
+    return (
+      <>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <T variant="meta" tone="muted">{dayLabel(day.date)}</T>
+          <Pill
+            label={`${day.rhythm.streak}-day rhythm`}
+            tone="warning"
+            icon={<Flame size={13} color={c.warningInk} strokeWidth={2.4} />}
+          />
+        </View>
+        <T variant="display" style={{ fontSize: 34, lineHeight: 40 }}>Rest day.</T>
+        <Card tone="primary" style={{ gap: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <IconTile name="moon" size={46} bg={c.white} color={c.primary} />
+            <View style={{ flex: 1, gap: 3 }}>
+              <T variant="subheading">Tonight is off the record.</T>
+              <T variant="meta" tone="primary">Your first real day starts tomorrow.</T>
+            </View>
+          </View>
+          <T variant="meta" style={{ color: c.primaryPressed }}>
+            No quests, no penalties tonight. Meals and stats stay available if you want to look around.
+          </T>
+        </Card>
+      </>
+    );
+  }
 
   function primaryAction(quest: Quest) {
     if (quest.state === 'salvageable') {
@@ -171,22 +200,11 @@ export default function Today({
     <>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <T variant="meta" tone="muted">{dayLabel(day.date)}</T>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-          {day.unread_report && (
-            <PressableScale
-              onPress={() => onRecap(day.unread_report!.date)}
-              accessibilityLabel="Yesterday's recap"
-              style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: c.primarySoft, alignItems: 'center', justifyContent: 'center' }}
-            >
-              <Sparkles size={16} color={c.primary} />
-            </PressableScale>
-          )}
-          <Pill
-            label={`${day.rhythm.streak}-day rhythm`}
-            tone="warning"
-            icon={<Flame size={13} color={c.warningInk} strokeWidth={2.4} />}
-          />
-        </View>
+        <Pill
+          label={`${day.rhythm.streak}-day rhythm`}
+          tone="warning"
+          icon={<Flame size={13} color={c.warningInk} strokeWidth={2.4} />}
+        />
       </View>
 
       <T variant="display" style={{ fontSize: 34, lineHeight: 40 }}>{phaseCopy[phase]}</T>

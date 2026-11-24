@@ -113,7 +113,7 @@ export default function QuestApp() {
       void syncReminders(next).catch(() => {});
     } catch (caught) {
       if (index === latest.current) {
-        setError(caught instanceof Error ? caught.message : 'Could not load today.');
+        setError(caught instanceof Error ? caught.message : 'Couldn’t load today.');
       }
     }
   }, [connection]);
@@ -121,13 +121,13 @@ export default function QuestApp() {
   const refreshStats = useCallback(async () => {
     if (!connection) return;
     try { setStats(await api<StatsData>(connection, '/api/stats')); }
-    catch (caught) { setNotice(caught instanceof Error ? caught.message : 'Could not load stats.'); }
+    catch (caught) { setNotice(caught instanceof Error ? caught.message : 'Couldn’t load stats.'); }
   }, [connection]);
 
   const refreshQuests = useCallback(async () => {
     if (!connection) return;
     try { setQuests((await api<{ quests: QuestSetting[] }>(connection, '/api/quests')).quests); }
-    catch (caught) { setNotice(caught instanceof Error ? caught.message : 'Could not load quests.'); }
+    catch (caught) { setNotice(caught instanceof Error ? caught.message : 'Couldn’t load quests.'); }
   }, [connection]);
 
   useEffect(() => {
@@ -326,14 +326,14 @@ export default function QuestApp() {
         onPress: () => {
           void api(connection, `/api/meals/${id}`, 'DELETE')
             .then(() => { closeSheet(); void refresh(); void refreshStats(); })
-            .catch((caught) => setNotice(caught instanceof Error ? caught.message : 'Could not remove that meal.'));
+            .catch((caught) => setNotice(caught instanceof Error ? caught.message : 'Couldn’t remove that meal.'));
         }
       }
     ]);
   }, [connection, refresh, refreshStats]);
 
   const removeWorkout = useCallback((id: number) => {
-    Alert.alert('Remove this session?', 'The calories it added will leave today.', [
+    Alert.alert('Remove this session?', 'Those extra calories will come off today’s budget.', [
       { text: 'Keep it', style: 'cancel' },
       {
         text: 'Remove',
@@ -342,6 +342,30 @@ export default function QuestApp() {
       }
     ]);
   }, [mutate]);
+
+  const startTomorrow = useCallback(() => {
+    if (!connection) return;
+    Alert.alert(
+      'Start tomorrow?',
+      'Tonight won’t count and no penalties apply. Your first real day starts at midnight.',
+      [
+        { text: 'Not now', style: 'cancel' },
+        {
+          text: 'Start tomorrow',
+          style: 'destructive',
+          onPress: () => {
+            void api(connection, '/api/profile/start', 'POST', { mode: 'tomorrow' })
+              .then(async () => {
+                setNotice('Tonight is off the record. Your first day starts tomorrow.');
+                await refresh();
+                await refreshStats();
+              })
+              .catch((caught) => setNotice(caught instanceof Error ? caught.message : 'Could not start tomorrow.'));
+          }
+        }
+      ]
+    );
+  }, [connection, refresh, refreshStats]);
 
   const exportData = useCallback(async () => {
     if (!connection) return;
@@ -352,7 +376,7 @@ export default function QuestApp() {
       file.write(JSON.stringify(backup, null, 2));
       await Sharing.shareAsync(file.uri, { mimeType: 'application/json' });
     } catch (caught) {
-      setNotice(caught instanceof Error ? caught.message : 'Could not export your data.');
+      setNotice(caught instanceof Error ? caught.message : 'Couldn’t export your data.');
     }
   }, [connection, day?.date]);
 
@@ -404,7 +428,6 @@ export default function QuestApp() {
                 onWorkout={(walk) => setSheet({ kind: 'workout', walk })}
                 onMeal={(type) => openMeal(type as MealType)}
                 onQuest={(quest) => setSheet({ kind: 'quest-menu', quest })}
-                onRecap={(date) => setSheet({ kind: 'recap', date, markSeen: true })}
               />
             </Screen>
           )}
@@ -456,6 +479,7 @@ export default function QuestApp() {
                 onExport={exportData}
                 onSleep={() => setSheet({ kind: 'sleep' })}
                 onUpdate={() => setSheet({ kind: 'update' })}
+                onStartTomorrow={startTomorrow}
                 serverUrl={connection.url}
               />
             </Screen>
@@ -496,7 +520,7 @@ export default function QuestApp() {
             visible={!!mealSheet}
             onClose={closeSheet}
             title={mealSheet?.meal ? 'Edit meal' : 'Log a meal'}
-            subtitle="Photo it, describe it, or type the numbers."
+            subtitle="Take a photo, describe it, or enter the numbers."
           >
             {mealSheet && (
               <MealEditor
@@ -643,7 +667,7 @@ function TabBar({
                 style={{
                   width: 40, height: 40, borderRadius: 20,
                   alignItems: 'center', justifyContent: 'center',
-                  backgroundColor: active ? c.primarySoft : 'transparent'
+                  backgroundColor: 'transparent'
                 }}
               >
                 <Icon size={24} color={active ? c.primary : c.faint} strokeWidth={active ? 2.5 : 2} />

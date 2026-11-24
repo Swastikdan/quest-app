@@ -2,6 +2,7 @@ import type { ProfileMetricsInput } from './nutrition';
 
 export type Profile = ProfileMetricsInput & {
   timezone: string;
+  journey_start_date: string | null;
   target_calories: number;
   bmr: number;
   tdee: number;

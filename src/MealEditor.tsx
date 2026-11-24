@@ -106,7 +106,7 @@ export default function MealEditor({
   async function openCamera() {
     const granted = permission?.granted || (await requestPermission()).granted;
     if (!granted) {
-      setError('Camera access is off. Describe the meal instead — that works just as well.');
+      setError('Camera access is off. Describe the meal instead — it works just as well.');
       return;
     }
     setReady(false);
@@ -127,7 +127,7 @@ export default function MealEditor({
       setPhoto(saved.uri);
       setStage('describe');
     } catch {
-      setError('Could not take the photo. Try again or describe the meal.');
+      setError('Couldn’t take the photo. Try again or describe the meal.');
     } finally {
       setBusy(false);
     }
@@ -150,7 +150,7 @@ export default function MealEditor({
         signal: AbortSignal.timeout?.(20000)
       });
       if (!response.ok && response.status !== 409) {
-        throw new Error('The photo couldn’t upload. You can still enter the meal manually.');
+        throw new Error('Couldn’t upload the photo. You can still enter the meal manually.');
       }
       assetId.current = signed.asset_id;
     } else {
@@ -214,7 +214,7 @@ export default function MealEditor({
       setFat(String(Math.round(estimate.fat_g)));
       setStage('review');
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'AI couldn’t read that one — enter a rough number.');
+      setError(caught instanceof Error ? caught.message : 'AI couldn’t read that one. Enter a rough number instead.');
       setStage('review');
     } finally {
       setBusy(false);
@@ -223,7 +223,7 @@ export default function MealEditor({
 
   async function save() {
     if (!calories.trim() || !Number.isFinite(Number(calories))) {
-      setError('Add a rough calorie number.');
+      setError('Enter a rough calorie number.');
       return;
     }
     setBusy(true);
@@ -256,7 +256,7 @@ export default function MealEditor({
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       onDone();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not save that meal.');
+      setError(caught instanceof Error ? caught.message : 'Couldn’t save that meal.');
     } finally {
       setBusy(false);
     }
@@ -287,8 +287,8 @@ export default function MealEditor({
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 13, padding: 16, backgroundColor: c.surface, borderRadius: 18, borderWidth: 1.5, borderColor: c.line }}>
                 <IconTile component={Camera} size={46} bg={c.primarySoft} color={c.primary} />
                 <View style={{ flex: 1, gap: 2 }}>
-                  <T variant="bodyStrong">Photograph the plate</T>
-                  <T variant="meta" tone="muted">Messy is fine. Get the whole plate in frame.</T>
+                  <T variant="bodyStrong">Take a photo</T>
+                  <T variant="meta" tone="muted">Messy is fine. Keep the whole plate in frame.</T>
                 </View>
                 <ChevronRight size={18} color={c.faint} />
               </View>
@@ -298,7 +298,7 @@ export default function MealEditor({
                 <IconTile component={PenLine} size={46} bg={c.purpleSoft} color={c.purple} />
                 <View style={{ flex: 1, gap: 2 }}>
                   <T variant="bodyStrong">Describe it instead</T>
-                  <T variant="meta" tone="muted">“2 rotis, dal, 30g ghee” is enough.</T>
+                  <T variant="meta" tone="muted">“2 rotis, dal, 30 g ghee” is enough.</T>
                 </View>
                 <ChevronRight size={18} color={c.faint} />
               </View>
@@ -317,14 +317,14 @@ export default function MealEditor({
 
       {stage === 'camera' && (
         <>
-          <T variant="meta" tone="muted">Just get the whole plate in frame — messy is fine.</T>
+          <T variant="meta" tone="muted">Keep the whole plate in frame. Messy is fine.</T>
           <View style={{ height: 320, borderRadius: 20, overflow: 'hidden', backgroundColor: c.ink }}>
             <CameraView
               facing="back"
               ref={camera}
               style={{ flex: 1 }}
               onCameraReady={() => setReady(true)}
-              onMountError={() => setError('Could not open the camera.')}
+              onMountError={() => setError('Couldn’t open the camera.')}
             />
           </View>
           <Button label={busy ? 'Taking…' : 'Take photo'} onPress={capture} disabled={!ready || busy} full size="lg" />
@@ -342,7 +342,7 @@ export default function MealEditor({
             multiline
             value={description}
             onChangeText={setDescription}
-            placeholder="e.g. 2 rotis, 1 katori dal, 30g ghee, 1 cup chai"
+            placeholder="e.g. 2 rotis, 1 katori dal, 30 g ghee, 1 cup chai"
             maxLength={500}
           />
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 7 }}>
@@ -375,7 +375,7 @@ export default function MealEditor({
           <ActivityIndicator color={c.primary} />
           <T variant="subheading">Reading your meal…</T>
           <T variant="meta" tone="muted" align="center" style={{ maxWidth: 260 }}>
-            {description || 'Looking at the photo and counting the ghee.'}
+            {description || 'Checking the portions and counting the ghee.'}
           </T>
         </Card>
       )}
@@ -415,14 +415,14 @@ export default function MealEditor({
               )}
               <T variant="caption" tone="muted">
                 {result.confidence === 'low'
-                  ? 'Hard to tell portions here — tap a number to tweak it.'
-                  : 'Rough estimate — tap any number to tweak.'}
+                  ? 'Hard to judge portions here. Tap any number to adjust.'
+                  : 'Rough estimate. Tap any number to adjust.'}
               </T>
             </Card>
           ) : (
             <Card style={{ gap: 5 }}>
-              <T variant="subheading">A rough guess works fine.</T>
-              <T variant="meta" tone="muted">Enter the calories and macros you remember. You can refine later.</T>
+              <T variant="subheading">A rough estimate is fine.</T>
+              <T variant="meta" tone="muted">Enter what you remember. You can edit it later.</T>
             </Card>
           )}
 
@@ -495,7 +495,7 @@ function FoodSource({ value, onChange, penalty }: { value: boolean; onChange: (v
     <View style={{ flexDirection: 'row', gap: 9 }}>
       <SourceKey
         active={!value}
-        title="Home-made"
+        title="Home-cooked"
         hint="Counts for the quest"
         icon={<CookingPot size={18} color={!value ? c.primary : c.muted} />}
         onPress={() => onChange(false)}

@@ -58,7 +58,7 @@ export default function Meals({
             <T variant="numberSm" style={{ color: over ? c.warningInk : c.successInk }}>
               {over ? '+' : ''}{Math.abs(budget.remaining).toLocaleString('en-IN')}
             </T>
-            <T variant="caption" tone="muted">{over ? 'over budget' : 'left to eat'}</T>
+            <T variant="caption" tone="muted">{over ? 'over budget' : 'left today'}</T>
           </View>
         </View>
         <ProgressBar value={over ? 1 : percent} color={over ? c.warning : c.primary} height={9} />
@@ -71,8 +71,8 @@ export default function Meals({
 
       <Card tone="primary" style={{ gap: 13 }}>
         <View style={{ gap: 3 }}>
-          <T variant="subheading">Just tell me what you ate</T>
-          <T variant="meta" tone="muted">Grams, katoris, rotis — ramble. AI does the maths.</T>
+          <T variant="subheading">Tell me what you ate</T>
+          <T variant="meta" tone="muted">Grams, katoris, rotis — write it naturally. AI handles the maths.</T>
         </View>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {suggestions.map((item) => (
@@ -119,7 +119,7 @@ export default function Meals({
                   </View>
                   <View style={{ flex: 1, gap: 1 }}>
                     <T variant="bodyStrong">Add {mealNames[type].toLowerCase()}</T>
-                    <T variant="meta" tone="muted">Photo it, or describe it.</T>
+                    <T variant="meta" tone="muted">Snap a photo or describe it.</T>
                   </View>
                   <ChevronRight size={17} color={c.faint} />
                 </View>
@@ -170,7 +170,7 @@ export default function Meals({
       )}
 
       <T variant="caption" tone="faint" align="center" style={{ paddingHorizontal: 24 }}>
-        Indian portions are estimated — one katori, one roti, one spoon of ghee at a time.
+        Indian portions are estimated one katori, roti and spoon of ghee at a time.
       </T>
     </>
   );

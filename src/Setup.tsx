@@ -29,8 +29,8 @@ type Draft = {
 };
 
 const goalOptions: Array<{ key: Goal; title: string; hint: string; icon: typeof TrendingDown; color: string; soft: string }> = [
-  { key: 'lose', title: 'Lose fat', hint: 'A steady deficit, without hunger games', icon: TrendingDown, color: c.successInk, soft: c.successSoft },
-  { key: 'maintain', title: 'Maintain', hint: 'Hold the line and build the rhythm', icon: Minus, color: c.primary, soft: c.primarySoft },
+  { key: 'lose', title: 'Lose fat', hint: 'A steady deficit without going hungry', icon: TrendingDown, color: c.successInk, soft: c.successSoft },
+  { key: 'maintain', title: 'Maintain', hint: 'Hold your weight and build the rhythm', icon: Minus, color: c.primary, soft: c.primarySoft },
   { key: 'gain', title: 'Gain muscle', hint: 'A small surplus with enough protein', icon: TrendingUp, color: c.purple, soft: c.purpleSoft }
 ];
 
@@ -38,15 +38,15 @@ const activityOptions: Array<{ key: ActivityLevel; title: string; hint: string; 
   { key: 'sedentary', title: 'Mostly seated', hint: 'Desk job · under 5k steps', icon: House },
   { key: 'light', title: 'Lightly active', hint: 'Some walking · 5–7k steps', icon: Footprints },
   { key: 'moderate', title: 'Moderately active', hint: 'On your feet · 7–10k steps', icon: Dumbbell },
-  { key: 'active', title: 'Very active', hint: 'Training 4+ days · 10k+ steps', icon: Flame },
-  { key: 'very_active', title: 'Athlete', hint: 'Physical job or two-a-days', icon: Trophy }
+  { key: 'active', title: 'Very active', hint: 'Active most of the day · 10k+ steps', icon: Flame },
+  { key: 'very_active', title: 'Athlete', hint: 'Physical job or training twice a day', icon: Trophy }
 ];
 
 export function normalizeConnection(value: Connection): Connection {
   const parsed = new URL(value.url.trim());
   const devLoopback = __DEV__ && parsed.protocol === 'http:' && parsed.hostname === '127.0.0.1';
   if ((!devLoopback && parsed.protocol !== 'https:') || parsed.username || parsed.password) {
-    throw new Error('Enter your HTTPS server address.');
+    throw new Error('Enter an HTTPS server address.');
   }
   return { url: parsed.origin, key: value.key.trim() };
 }
@@ -91,6 +91,10 @@ export default function Setup({ onConnect }: { onConnect: (next: Connection) => 
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'Asia/Kolkata'
   });
   const [customTarget, setCustomTarget] = useState<number | null>(null);
+  const [startMode, setStartMode] = useState<'today' | 'tomorrow'>(() => {
+    const hour = new Date().getHours();
+    return hour >= 20 || hour < 5 ? 'tomorrow' : 'today';
+  });
   const [connection, setConnection] = useState<Connection>({
     url: process.env.EXPO_PUBLIC_QUEST_URL ?? 'https://quest.swastik.workers.dev',
     key: ''
@@ -140,7 +144,7 @@ export default function Setup({ onConnect }: { onConnect: (next: Connection) => 
     setError('');
     try {
       const credentials = normalizeConnection(connection);
-      if (!credentials.key) throw new Error('Paste your Quest API key.');
+      if (!credentials.key) throw new Error('Paste your API key.');
       await api(credentials, '/api/ping');
       const existing = await api<{ profile: Profile | null }>(credentials, '/api/profile');
       if (!existing.profile) {
@@ -156,15 +160,16 @@ export default function Setup({ onConnect }: { onConnect: (next: Connection) => 
           timezone: draft.timezone
         });
       }
+      await api(credentials, '/api/profile/start', 'POST', { mode: startMode });
       await saveConnection(credentials);
       onConnect(credentials);
     } catch (caught) {
       setError(
         caught instanceof RequestError && caught.status === 401
-          ? 'Server didn’t recognise that key — check for extra spaces.'
+          ? 'Your server didn’t recognise that key. Check for extra spaces.'
           : caught instanceof Error
             ? caught.message
-            : 'Could not connect.'
+            : 'Couldn’t connect to your server.'
       );
     } finally {
       setBusy(false);
@@ -230,7 +235,7 @@ export default function Setup({ onConnect }: { onConnect: (next: Connection) => 
 
           {step === 1 && (
             <>
-              <StepTitle hint="These set your starting budget.">A few numbers to start.</StepTitle>
+              <StepTitle hint="Used to calculate your daily budget.">A few numbers to start.</StepTitle>
               <View style={{ alignItems: 'center' }}><T variant="caption" tone="muted">SEX</T></View>
               <Segmented
                 options={[{ key: 'male', label: 'Male' }, { key: 'female', label: 'Female' }]}
@@ -354,7 +359,7 @@ export default function Setup({ onConnect }: { onConnect: (next: Connection) => 
                     full
                   />
                 )}
-                <T variant="caption" tone="faint">Recommended for {draft.goal === 'lose' ? 'fat loss' : draft.goal === 'gain' ? 'muscle gain' : 'maintenance'} at {draft.activity_level.replace('_', ' ')}</T>
+                <T variant="caption" tone="faint">Recommended for {draft.goal === 'lose' ? 'fat loss' : draft.goal === 'gain' ? 'muscle gain' : 'maintenance'} · {draft.activity_level.replace('_', ' ')}</T>
               </Card>
 
               <Card style={{ gap: 10 }}>
@@ -374,7 +379,7 @@ export default function Setup({ onConnect }: { onConnect: (next: Connection) => 
                 <IconTile component={Dumbbell} size={38} bg={c.white} color={c.danger} />
                 <View style={{ flex: 1, gap: 2 }}>
                   <T variant="bodyStrong">Workouts add calories back</T>
-                  <T variant="meta" style={{ color: c.dangerInk }}>45 min of strength ≈ +{workoutPreview} kcal.</T>
+                  <T variant="meta" style={{ color: c.dangerInk }}>45 min of strength adds about {workoutPreview} kcal.</T>
                 </View>
               </View>
 
@@ -385,10 +390,23 @@ export default function Setup({ onConnect }: { onConnect: (next: Connection) => 
 
           {step === 5 && (
             <>
-              <StepTitle hint="Paste the key for your own Worker.">Connect your server.</StepTitle>
+              <StepTitle hint="Enter your Worker address and API key.">Connect your server.</StepTitle>
               <Card style={{ gap: 13 }}>
                 <ConnectionFields value={connection} change={setConnection} />
               </Card>
+              <View style={{ alignItems: 'center', gap: 7 }}>
+                <T variant="caption" tone="muted">STARTING</T>
+                <Segmented
+                  options={[{ key: 'today', label: 'Today' }, { key: 'tomorrow', label: 'Tomorrow' }]}
+                  value={startMode}
+                  onChange={setStartMode}
+                />
+                <T variant="caption" tone="faint" align="center" style={{ maxWidth: 320 }}>
+                  {startMode === 'tomorrow'
+                    ? 'Tonight is off the record. Your first day starts at midnight.'
+                    : 'Today’s quests count from midnight; late setup can include closed windows.'}
+                </T>
+              </View>
               {!!error && (
                 <View style={{ backgroundColor: c.dangerSoft, borderRadius: 14, padding: 13 }}>
                   <T variant="meta" style={{ color: c.dangerInk }}>{error}</T>

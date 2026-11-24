@@ -30,7 +30,7 @@ export type QuestSetting = {
 
 export default function Settings({
   day, quests, reminders, onUpdateReminder, onAddReminder, onDeleteReminder, onEditProfile, onEditGoal,
-  onWeigh, onEditQuest, onAddQuest, onServer, onExport, onSleep, onUpdate, serverUrl
+  onWeigh, onEditQuest, onAddQuest, onServer, onExport, onSleep, onUpdate, onStartTomorrow, serverUrl
 }: {
   day: Day;
   quests: QuestSetting[];
@@ -47,6 +47,7 @@ export default function Settings({
   onExport: () => void;
   onSleep: () => void;
   onUpdate: () => void;
+  onStartTomorrow: () => void;
   serverUrl: string;
 }) {
   const profile = day.profile;
@@ -80,7 +81,7 @@ export default function Settings({
               <T variant="meta" tone="muted">kcal</T>
             </View>
             <T variant="meta" tone="muted">
-              {profile.custom_target_calories ? 'Custom target' : profile.goal === 'lose' ? 'Steady fat loss' : profile.goal === 'gain' ? 'Steady gain' : 'Maintain'}
+              {profile.custom_target_calories ? 'Custom target' : profile.goal === 'lose' ? 'Fat loss' : profile.goal === 'gain' ? 'Muscle gain' : 'Maintain'}
               {!profile.custom_target_calories && adjustment !== 0 ? ` · ${adjustment > 0 ? '+' : '−'}${Math.abs(adjustment)} kcal` : ''}
             </T>
           </View>
@@ -91,7 +92,7 @@ export default function Settings({
           <BudgetBit label="Maintenance" value={`${profile.tdee.toLocaleString('en-IN')}`} />
           <BudgetBit label="Protein" value={`${profile.protein_target} g`} />
         </View>
-        <T variant="caption" tone="faint">Workouts add calories back on top of this budget.</T>
+        <T variant="caption" tone="faint">Workouts add calories back on top of this.</T>
       </Card>
 
       <SectionHeader title="Quests" action={<Button label="Add" onPress={onAddQuest} size="sm" variant="soft" icon={<Plus size={14} color={c.ink} />} />} />
@@ -137,11 +138,13 @@ export default function Settings({
       <Card padded={false} style={{ overflow: 'hidden' }}>
         <SettingRow icon={<Server size={19} color={c.primary} />} title="Server connection" hint={serverLabel} onPress={onServer} bg={c.primarySoft} />
         <Divider />
-        <SettingRow icon={<Download size={19} color={c.successInk} />} title="Export backup" hint="Full JSON of everything" onPress={onExport} bg={c.successSoft} />
+        <SettingRow icon={<Download size={19} color={c.successInk} />} title="Export backup" hint="Full JSON backup of your data" onPress={onExport} bg={c.successSoft} />
         <Divider />
-        <SettingRow icon={<Moon size={19} color={c.indigo} />} title="Sleep verification" hint="How tonight’s check-in is judged" onPress={onSleep} bg={c.indigoSoft} />
+        <SettingRow icon={<Moon size={19} color={c.indigo} />} title="Sleep verification" hint="How tonight’s sleep check works" onPress={onSleep} bg={c.indigoSoft} />
         <Divider />
         <SettingRow icon={<RefreshCw size={19} color={c.primary} />} title="App update" hint={`Version ${currentVersion()} · check GitHub Releases`} onPress={onUpdate} bg={c.primarySoft} />
+        <Divider />
+        <SettingRow icon={<Moon size={19} color={c.indigo} />} title="Start tomorrow" hint="Skip the rest of today — no penalties" onPress={onStartTomorrow} bg={c.indigoSoft} />
       </Card>
 
       <T variant="caption" tone="faint" align="center">Quest 1.0</T>

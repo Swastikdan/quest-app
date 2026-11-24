@@ -49,12 +49,12 @@ export function QuickAddSheet({
 }) {
   const tiles = [
     { title: 'Log a meal', hint: 'Photo or numbers', icon: Utensils, color: c.orange, soft: c.orangeSoft, action: onMeal },
-    { title: 'Describe a meal', hint: 'Ramble in Indian portions', icon: PenLine, color: c.primary, soft: c.primarySoft, action: onDescribe },
+    { title: 'Describe a meal', hint: 'Katoris, rotis, rough portions', icon: PenLine, color: c.primary, soft: c.primarySoft, action: onDescribe },
     { title: 'Log movement', hint: 'Gym, walk or sport', icon: Dumbbell, color: c.danger, soft: c.dangerSoft, action: onWorkout },
-    { title: 'Weigh in', hint: 'One clean number', icon: Scale, color: c.purple, soft: c.purpleSoft, action: onWeigh }
+    { title: 'Weigh in', hint: 'One number for today', icon: Scale, color: c.purple, soft: c.purpleSoft, action: onWeigh }
   ];
   return (
-    <Sheet visible={visible} onClose={onClose} title="Quick add" subtitle="What happened?">
+    <Sheet visible={visible} onClose={onClose} title="Quick add" subtitle="Add to your day.">
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
         {tiles.map((tile) => {
           const Icon = tile.icon;
@@ -181,7 +181,7 @@ export function QuestMenuSheet({
               <T variant="bodyStrong">
                 {quest.state === 'later' ? 'Not open yet' : quest.state === 'skipped' ? 'Skipped today' : 'Closed for today'}
               </T>
-              <T variant="meta" tone="muted">The day keeps moving. Tomorrow is a fresh start.</T>
+              <T variant="meta" tone="muted">The day moves on. Fresh start tomorrow.</T>
             </Card>
           )}
         </View>
@@ -271,7 +271,7 @@ export function WorkoutSheet({
       onSaved();
       onClose();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not save that session.');
+      setError(caught instanceof Error ? caught.message : 'Couldn’t save that session.');
     } finally {
       setBusy(false);
     }
@@ -424,14 +424,14 @@ export function WeightSheet({
       onSaved();
       onClose();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not save that weight.');
+      setError(caught instanceof Error ? caught.message : 'Couldn’t save that weight.');
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Weigh in" subtitle="One number, once a day. The trend is what matters.">
+    <Sheet visible={visible} onClose={onClose} title="Weigh in" subtitle="Once a day. The trend is what matters.">
       <Card style={{ alignItems: 'center', gap: 14, paddingVertical: 24 }}>
         <IconTile component={Scale} size={52} bg={c.primarySoft} color={c.primary} />
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 4 }}>
@@ -486,8 +486,8 @@ export function ProfileSheet({
     { key: 'sedentary', title: 'Mostly seated', hint: 'Desk job · under 5k steps' },
     { key: 'light', title: 'Lightly active', hint: 'Some walking · 5–7k steps' },
     { key: 'moderate', title: 'Moderately active', hint: 'On your feet · 7–10k steps' },
-    { key: 'active', title: 'Very active', hint: 'Training 4+ days' },
-    { key: 'very_active', title: 'Athlete', hint: 'Physical job or two-a-days' }
+    { key: 'active', title: 'Very active', hint: 'Active most of the day · 10k+ steps' },
+    { key: 'very_active', title: 'Athlete', hint: 'Physical job or heavy daily movement' }
   ];
 
   async function save() {
@@ -507,14 +507,14 @@ export function ProfileSheet({
       onSaved();
       onClose();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not save your profile.');
+      setError(caught instanceof Error ? caught.message : 'Couldn’t save your profile.');
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Your profile" subtitle="The budget follows these numbers.">
+    <Sheet visible={visible} onClose={onClose} title="Your profile" subtitle="Your daily budget is built from these.">
       <T variant="caption" tone="muted">SEX</T>
       <Segmented options={[{ key: 'male', label: 'Male' }, { key: 'female', label: 'Female' }]} value={draft.sex} onChange={(value) => setDraft({ ...draft, sex: value })} />
       <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -600,14 +600,14 @@ export function GoalSheet({
       onSaved();
       onClose();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not save your goal.');
+      setError(caught instanceof Error ? caught.message : 'Couldn’t save your goal.');
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Adjust your goal" subtitle="Your budget updates today.">
+    <Sheet visible={visible} onClose={onClose} title="Adjust your goal" subtitle="Updates today’s budget right away.">
       <Segmented
         options={[
           { key: 'lose', label: 'Lose fat' },
@@ -703,7 +703,7 @@ export function QuestEditorSheet({
 
   async function save() {
     if (!title.trim()) {
-      setError('Give the quest a name.');
+      setError('Give this quest a name.');
       return;
     }
     setBusy(true);
@@ -729,7 +729,7 @@ export function QuestEditorSheet({
       onSaved();
       onClose();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not save that quest.');
+      setError(caught instanceof Error ? caught.message : 'Couldn’t save that quest.');
     } finally {
       setBusy(false);
     }
@@ -747,7 +747,7 @@ export function QuestEditorSheet({
       onSaved();
       onClose();
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not archive that quest.');
+      setError(caught instanceof Error ? caught.message : 'Couldn’t archive that quest.');
     } finally {
       setBusy(false);
     }
@@ -758,7 +758,7 @@ export function QuestEditorSheet({
       visible={visible}
       onClose={onClose}
       title={quest ? 'Edit quest' : 'New quest'}
-      subtitle={quest ? 'Changes apply to the next day.' : 'A small thing worth doing daily.'}
+      subtitle={quest ? 'Changes take effect tomorrow.' : 'Something small worth doing every day.'}
     >
       <Field label="Title" value={title} onChangeText={setTitle} placeholder="e.g. Read 10 pages" maxLength={80} />
       <Field label="Subtitle" value={subtitle} onChangeText={setSubtitle} placeholder="Why it matters" maxLength={140} />
@@ -780,7 +780,7 @@ export function QuestEditorSheet({
         <Field label="Fallback points" value={salvage} keyboardType="number-pad" onChangeText={setSalvage} containerStyle={{ flex: 1 }} />
         <Field label="Opens (HH:MM)" value={start} onChangeText={setStart} placeholder="optional" containerStyle={{ flex: 1 }} />
       </View>
-      <Field label="Closes (HH:MM)" value={end} onChangeText={setEnd} placeholder="leave empty for all day" />
+      <Field label="Closes (HH:MM)" value={end} onChangeText={setEnd} placeholder="Leave empty for all day" />
       {!!error && (
         <View style={{ backgroundColor: c.dangerSoft, borderRadius: 13, padding: 12 }}>
           <T variant="meta" style={{ color: c.dangerInk }}>{error}</T>
@@ -827,26 +827,26 @@ export function ServerSheet({
     try {
       const next = { url: new URL(draft.url.trim()).origin, key: draft.key.trim() };
       if (!next.url.startsWith('https://') && !(__DEV__ && next.url.startsWith('http://127.0.0.1'))) {
-        throw new Error('Enter your HTTPS server address.');
+        throw new Error('Enter an HTTPS server address.');
       }
       await api(next, '/api/ping');
       setOk(true);
       onSaved(next);
       setTimeout(onClose, 450);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Could not reach that server.');
+      setError(caught instanceof Error ? caught.message : 'Couldn’t reach that server.');
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <Sheet visible={visible} onClose={onClose} title="Server connection" subtitle="The Worker that holds your data.">
+    <Sheet visible={visible} onClose={onClose} title="Server connection" subtitle="The Worker that stores your data.">
       <ConnectionFields value={draft} change={setDraft} />
       <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 9, backgroundColor: c.primarySoft, borderRadius: 14, padding: 12 }}>
         <KeyIcon />
         <T variant="meta" style={{ color: c.primaryPressed, flex: 1 }}>
-          Stored encrypted on this phone. It authenticates every request to your Worker.
+          Stored encrypted on this device. Used to authenticate every request to your Worker.
         </T>
       </View>
       {!!ok && <Pill label="Connected" tone="success" />}
@@ -882,7 +882,7 @@ export function RecapSheet({
     let active = true;
     api<Report>(connection, `/api/report/${date}`)
       .then((value) => { if (active) setReport(value); })
-      .catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : 'Could not load that day.'); });
+      .catch((caught) => { if (active) setError(caught instanceof Error ? caught.message : 'Couldn’t load that day.'); });
     return () => { active = false; };
   }, [visible, date, connection]);
 
@@ -904,8 +904,8 @@ export function RecapSheet({
             </View>
             <View style={{ flexDirection: 'row', gap: 14 }}>
               <Mini label="XP" value={`+${score.xp_earned}`} />
-              <Mini label="Streak" value={`${score.streak_after} days`} />
-              <Mini label="Salvaged" value={`${score.quests_salvaged}`} />
+              <Mini label="Rhythm" value={`${score.streak_after} days`} />
+              <Mini label="Fallbacks" value={`${score.quests_salvaged}`} />
             </View>
           </Card>
           <Card style={{ gap: 8 }}>
@@ -937,7 +937,7 @@ export function RecapSheet({
           <Button label="Done" onPress={() => { onSeen?.(); onClose(); }} full size="lg" />
         </>
       )}
-      {report && !score && <T variant="meta" tone="muted">This day is still open.</T>}
+      {report && !score && <T variant="meta" tone="muted">This day is still in progress.</T>}
     </Sheet>
   );
 }
@@ -966,13 +966,13 @@ export function SleepSheet({
       <Card style={{ gap: 9 }}>
         <T variant="bodyStrong">What Quest can see</T>
         <T variant="meta" tone="muted">
-          Quest can see when this app opens or goes into the background. It cannot see other apps or the rest of your phone.
+          Quest only sees when this app opens or moves to the background. It cannot see other apps or anything else on your phone.
         </T>
       </Card>
       <Card style={{ gap: 9 }}>
         <T variant="bodyStrong">How the check works</T>
         <T variant="meta" tone="muted">
-          You lock in when you put the phone down. If there is a gap in the evidence, your check-in stays self-reported. Sustained use past the two-minute grace window voids the sleep quest — that is the only time it does.
+          Lock in when you put the phone down. If there’s a gap in activity, your check-in stays self-reported. Only sustained use past the two-minute grace window voids the sleep quest.
         </T>
       </Card>
       <Card style={{ gap: 10 }}>
@@ -997,7 +997,7 @@ export function SleepSheet({
         </View>
         {usageEnabled && <Pill label="Watching this phone tonight" tone="primary" />}
       </Card>
-      <Pill label="Two minutes of grace" tone="primary" />
+      <Pill label="Two-minute grace window" tone="primary" />
       <Button label="Got it" onPress={onClose} full size="lg" />
     </Sheet>
   );
@@ -1019,18 +1019,18 @@ export function GraceSheet({
   }, [visible]);
   const left = Math.max(0, Math.ceil((ends - now) / 1000));
   return (
-    <Sheet visible={visible} onClose={onClose} title="Putting the phone down?" subtitle="A two-minute grace, then sleep.">
+    <Sheet visible={visible} onClose={onClose} title="Putting the phone down?" subtitle="Two-minute grace, then sleep.">
       <Card tone="primary" style={{ gap: 8, alignItems: 'center', paddingVertical: 24 }}>
         <IconTile component={Moon} size={48} bg={c.white} color={c.primary} />
         <T variant="heading">{left > 0 ? `${left}s` : 'Grace ended'}</T>
         <T variant="meta" tone="primary" align="center" style={{ maxWidth: 270 }}>
           {left > 0
-            ? 'Lock your phone in the next two minutes and you keep tonight’s sleep quest.'
-            : 'The grace window has ended. Tomorrow is a fresh start.'}
+            ? 'Lock your phone within two minutes to keep tonight’s sleep quest.'
+            : 'The grace window ended. Fresh start tomorrow.'}
         </T>
       </Card>
       {left > 0 && <Button label="Putting it down now" onPress={() => { onGrace(); onClose(); }} full size="lg" />}
-      <Button label="Need to stay up" onPress={onClose} variant="ghost" full />
+      <Button label="I need to stay up" onPress={onClose} variant="ghost" full />
     </Sheet>
   );
 }

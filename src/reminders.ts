@@ -22,13 +22,13 @@ const CUSTOM_KEY = 'quest.reminders.custom';
 const LEGACY_ENABLED_KEY = 'quest.reminders';
 
 export const defaultReminders: Reminder[] = [
-  { id: 'wake-start', key: 'wake', title: 'Morning', body: 'Up already? Tap in whenever you’re moving.', time: '06:45', actions: [['wake', 'I’m up']], mode: 'notification', enabled: false, date: null, custom: false },
-  { id: 'wake-end', key: 'wake', title: '45 min left for morning', body: 'Still time for the wake quest — or grab a late start.', time: '09:15', actions: [['wake', 'Check in'], ['late', 'Late start']], mode: 'notification', enabled: false, date: null, custom: false },
-  { id: 'breakfast', key: 'breakfast', title: 'Breakfast check', body: 'Home food, or skip it — no penalty either way.', time: '08:15', actions: [['breakfast', 'Log breakfast']], mode: 'notification', enabled: false, date: null, custom: false },
+  { id: 'wake-start', key: 'wake', title: 'Morning', body: 'Up already? Check in whenever you’re moving.', time: '06:45', actions: [['wake', 'I’m up']], mode: 'notification', enabled: false, date: null, custom: false },
+  { id: 'wake-end', key: 'wake', title: '45 min left to check in', body: 'Still time for your wake quest, or log a late start.', time: '09:15', actions: [['wake', 'Check in'], ['late', 'Late start']], mode: 'notification', enabled: false, date: null, custom: false },
+  { id: 'breakfast', key: 'breakfast', title: 'Breakfast check', body: 'Home food, or skip it. No penalty either way.', time: '08:15', actions: [['breakfast', 'Log breakfast']], mode: 'notification', enabled: false, date: null, custom: false },
   { id: 'lunch', key: 'lunch', title: 'Lunch check', body: 'A photo or a quick description is enough.', time: '13:15', actions: [['lunch', 'Log lunch']], mode: 'notification', enabled: false, date: null, custom: false },
-  { id: 'move', key: 'gym', title: 'Evening move', body: 'Gym tonight, or is today a 20-min walk kind of day?', time: '18:30', actions: [['gym', 'Going'], ['walk', 'Swap to walk']], mode: 'notification', enabled: false, date: null, custom: false },
-  { id: 'dinner', key: 'dinner', title: 'Dinner check', body: 'Home food keeps the day green. Skip is free.', time: '19:45', actions: [['dinner', 'Log dinner']], mode: 'notification', enabled: false, date: null, custom: false },
-  { id: 'sleep', key: 'sleep', title: 'Start wrapping up', body: 'Put the phone down in the next 50 min to lock in tonight’s sleep.', time: '22:10', actions: [['sleep', 'Turning in']], mode: 'notification', enabled: false, date: null, custom: false }
+  { id: 'move', key: 'gym', title: 'Evening movement', body: 'Gym tonight, or is today a 20-min walk kind of day?', time: '18:30', actions: [['gym', 'Going'], ['walk', 'Swap to walk']], mode: 'notification', enabled: false, date: null, custom: false },
+  { id: 'dinner', key: 'dinner', title: 'Dinner check', body: 'Home food keeps the day green. Skipping is free.', time: '19:45', actions: [['dinner', 'Log dinner']], mode: 'notification', enabled: false, date: null, custom: false },
+  { id: 'sleep', key: 'sleep', title: 'Time to wind down', body: 'Put the phone down within 50 min to lock in tonight’s sleep.', time: '22:10', actions: [['sleep', 'Turning in']], mode: 'notification', enabled: false, date: null, custom: false }
 ];
 
 export const reminders = defaultReminders;
