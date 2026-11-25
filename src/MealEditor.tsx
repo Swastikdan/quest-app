@@ -105,12 +105,12 @@ export default function MealEditor({
     setError('');
     try {
       const scale = asset.width > 0 && asset.height > 0
-        ? Math.min(1, 1024 / Math.max(asset.width, asset.height))
+        ? Math.min(1, 768 / Math.max(asset.width, asset.height))
         : 1;
       const context = ImageManipulator.manipulate(asset.uri);
       if (scale < 1) context.resize({ width: Math.round(asset.width * scale) });
       const resized = await context.renderAsync();
-      const saved = await resized.saveAsync({ compress: 0.75, format: SaveFormat.JPEG });
+      const saved = await resized.saveAsync({ compress: 0.7, format: SaveFormat.JPEG });
       uploadKey.current = Crypto.randomUUID();
       assetId.current = null;
       if (createdDraft.current && draftId) {
