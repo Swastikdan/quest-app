@@ -40,6 +40,14 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Let Quest choose a meal photo from your gallery.",
+          "cameraPermission": "Let Quest photograph meals you want to log.",
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-notifications",
         {
           "sounds": [

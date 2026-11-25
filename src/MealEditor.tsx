@@ -1,19 +1,19 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Image } from 'expo-image';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as Crypto from 'expo-crypto';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
 import { fetch as expoFetch } from 'expo/fetch';
 import { File } from 'expo-file-system';
 import {
-  Camera, Check, ChevronRight, PenLine, Sparkles, Store, CookingPot, RotateCcw
+  Camera, Check, ChevronRight, Images, PenLine, Sparkles, Store, CookingPot, RotateCcw
 } from 'lucide-react-native';
 import { api, type Connection } from './api';
-import { c, font, mealPalette } from './theme';
+import { c } from './theme';
 import {
-  Button, Card, Field, IconTile, Pill, PressableScale, Segmented, T
+  Button, Card, Field, Pill, PressableScale, Segmented, T
 } from './ui';
 import type { Meal, MealType } from './types';
 
@@ -49,7 +49,7 @@ const suggestions = [
   '1 katori curd rice'
 ];
 
-type Stage = 'pick' | 'camera' | 'describe' | 'estimating' | 'review';
+type Stage = 'pick' | 'describe' | 'estimating' | 'review';
 
 export default function MealEditor({
   connection, date, initial, meal, onDone
@@ -60,10 +60,9 @@ export default function MealEditor({
   meal?: Meal;
   onDone: () => void;
 }) {
-  const [permission, requestPermission] = useCameraPermissions();
-  const camera = useRef<CameraView>(null);
   const uploadKey = useRef(Crypto.randomUUID());
   const assetId = useRef<string | null>(null);
+  const createdDraft = useRef(false);
   const [draftId, setDraftId] = useState<number | undefined>(meal?.id);
   const [mealType, setMealType] = useState<MealType>(meal?.meal_type ?? initial?.meal_type ?? 'lunch');
   const [outside, setOutside] = useState(
@@ -96,40 +95,74 @@ export default function MealEditor({
     };
   });
   const [busy, setBusy] = useState(false);
-  const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
   const hasPhoto = !!photo || !!meal?.photo_url;
   const penalty = mealType !== 'snack' ? 8 : 0;
   const showPenalty = outside && penalty > 0;
-  const palette = mealPalette[mealType]!;
 
-  async function openCamera() {
-    const granted = permission?.granted || (await requestPermission()).granted;
-    if (!granted) {
-      setError('Camera access is off. Describe the meal instead — it works just as well.');
-      return;
-    }
-    setReady(false);
-    setStage('camera');
-  }
-
-  async function capture() {
+  async function adoptPhoto(asset: { uri: string; width: number; height: number }) {
     setBusy(true);
     setError('');
     try {
-      const image = await camera.current?.takePictureAsync({ quality: 0.8 });
-      if (!image) return;
-      const scale = Math.min(1, 1024 / Math.max(image.width, image.height));
-      const context = ImageManipulator.manipulate(image.uri);
-      if (scale < 1) context.resize({ width: Math.round(image.width * scale) });
+      const scale = asset.width > 0 && asset.height > 0
+        ? Math.min(1, 1024 / Math.max(asset.width, asset.height))
+        : 1;
+      const context = ImageManipulator.manipulate(asset.uri);
+      if (scale < 1) context.resize({ width: Math.round(asset.width * scale) });
       const resized = await context.renderAsync();
       const saved = await resized.saveAsync({ compress: 0.75, format: SaveFormat.JPEG });
+      uploadKey.current = Crypto.randomUUID();
+      assetId.current = null;
+      if (createdDraft.current && draftId) {
+        // The draft still points at the old picture — drop it and start fresh.
+        await api(connection, `/api/meals/${draftId}`, 'DELETE').catch(() => {});
+        createdDraft.current = false;
+        setDraftId(undefined);
+      }
+      setResult(null);
+      setCalories('');
+      setProtein('');
+      setCarbs('');
+      setFat('');
       setPhoto(saved.uri);
       setStage('describe');
     } catch {
-      setError('Couldn’t take the photo. Try again or describe the meal.');
+      setError('Couldn’t use that photo. Try a different one.');
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function takePhoto() {
+    setError('');
+    try {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        setError('Camera access is off. You can pick a photo from the gallery instead.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        quality: 0.85
+      });
+      const asset = result.canceled ? null : result.assets[0];
+      if (asset) await adoptPhoto(asset);
+    } catch {
+      setError('Couldn’t open the camera. Pick a photo from the gallery instead.');
+    }
+  }
+
+  async function pickFromGallery() {
+    setError('');
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.9
+      });
+      const asset = result.canceled ? null : result.assets[0];
+      if (asset) await adoptPhoto(asset);
+    } catch {
+      setError('Couldn’t open your gallery. Try again.');
     }
   }
 
@@ -184,6 +217,7 @@ export default function MealEditor({
             asset_public_id: asset
           }, uploadKey.current + ':draft');
           activeId = draft.meal.id;
+          createdDraft.current = true;
           setDraftId(activeId);
         }
         const estimated = await api<{ meal: Meal }>(connection, '/api/meals/estimate', 'POST', {
@@ -263,6 +297,7 @@ export default function MealEditor({
   }
 
   const ingredients = result?.ingredients ?? [];
+  const remotePhoto = meal?.photo_url ? connection.url + meal.photo_url : '';
 
   return (
     <>
@@ -283,27 +318,37 @@ export default function MealEditor({
       {stage === 'pick' && (
         <>
           <View style={{ gap: 10 }}>
-            <PressableScale onPress={openCamera}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 13, padding: 16, backgroundColor: c.surface, borderRadius: 18, borderWidth: 1.5, borderColor: c.line }}>
-                <IconTile component={Camera} size={46} bg={c.primarySoft} color={c.primary} />
-                <View style={{ flex: 1, gap: 2 }}>
-                  <T variant="bodyStrong">Take a photo</T>
-                  <T variant="meta" tone="muted">Messy is fine. Keep the whole plate in frame.</T>
-                </View>
-                <ChevronRight size={18} color={c.faint} />
-              </View>
-            </PressableScale>
-            <PressableScale onPress={() => setStage('describe')}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 13, padding: 16, backgroundColor: c.surface, borderRadius: 18, borderWidth: 1.5, borderColor: c.line }}>
-                <IconTile component={PenLine} size={46} bg={c.purpleSoft} color={c.purple} />
-                <View style={{ flex: 1, gap: 2 }}>
-                  <T variant="bodyStrong">Describe it instead</T>
-                  <T variant="meta" tone="muted">“2 rotis, dal, 30 g ghee” is enough.</T>
-                </View>
-                <ChevronRight size={18} color={c.faint} />
-              </View>
-            </PressableScale>
+            <PickOption
+              icon={<Camera size={22} color={c.primary} />}
+              soft={c.primarySoft}
+              title="Take a photo"
+              hint="Opens your camera full screen. Keep the whole plate in frame."
+              onPress={takePhoto}
+              disabled={busy}
+            />
+            <PickOption
+              icon={<Images size={22} color={c.purple} />}
+              soft={c.purpleSoft}
+              title="Choose from gallery"
+              hint="Already snapped it? Pick the meal photo here."
+              onPress={pickFromGallery}
+              disabled={busy}
+            />
+            <PickOption
+              icon={<PenLine size={22} color={c.orange} />}
+              soft={c.orangeSoft}
+              title="Describe it instead"
+              hint="“2 rotis, dal, 30 g ghee” is enough."
+              onPress={() => setStage('describe')}
+              disabled={busy}
+            />
           </View>
+          {busy && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 4 }}>
+              <ActivityIndicator size="small" color={c.primary} />
+              <T variant="meta" tone="muted">Preparing your photo…</T>
+            </View>
+          )}
           <Button label="Enter calories manually" onPress={() => setStage('review')} variant="ghost" size="sm" />
           {meal?.photo_url && (
             <Image
@@ -315,27 +360,21 @@ export default function MealEditor({
         </>
       )}
 
-      {stage === 'camera' && (
-        <>
-          <T variant="meta" tone="muted">Keep the whole plate in frame. Messy is fine.</T>
-          <View style={{ height: 320, borderRadius: 20, overflow: 'hidden', backgroundColor: c.ink }}>
-            <CameraView
-              facing="back"
-              ref={camera}
-              style={{ flex: 1 }}
-              onCameraReady={() => setReady(true)}
-              onMountError={() => setError('Couldn’t open the camera.')}
-            />
-          </View>
-          <Button label={busy ? 'Taking…' : 'Take photo'} onPress={capture} disabled={!ready || busy} full size="lg" />
-          <Button label="Cancel" onPress={() => setStage('pick')} variant="soft" full />
-        </>
-      )}
-
       {stage === 'describe' && (
         <>
-          {!!photo && (
-            <Image source={photo} style={{ width: '100%', height: 190, borderRadius: 18, backgroundColor: c.soft }} contentFit="cover" />
+          {photo ? (
+            <>
+              <Image source={photo} style={{ width: '100%', height: 190, borderRadius: 18, backgroundColor: c.soft }} contentFit="cover" />
+              <View style={{ flexDirection: 'row', gap: 9 }}>
+                <Button label="Retake" onPress={takePhoto} size="sm" variant="soft" style={{ flex: 1 }} disabled={busy} icon={<Camera size={15} color={c.ink} />} />
+                <Button label="Gallery" onPress={pickFromGallery} size="sm" variant="soft" style={{ flex: 1 }} disabled={busy} icon={<Images size={15} color={c.ink} />} />
+              </View>
+            </>
+          ) : (
+            <View style={{ flexDirection: 'row', gap: 9 }}>
+              <Button label="Take a photo" onPress={takePhoto} size="sm" variant="soft" style={{ flex: 1.2 }} disabled={busy} icon={<Camera size={15} color={c.ink} />} />
+              <Button label="Gallery" onPress={pickFromGallery} size="sm" variant="soft" style={{ flex: 1 }} disabled={busy} icon={<Images size={15} color={c.ink} />} />
+            </View>
           )}
           <Field
             label={hasPhoto ? 'Anything hidden in there? (optional)' : 'What did you eat?'}
@@ -366,7 +405,6 @@ export default function MealEditor({
             size="lg"
           />
           <Button label="Enter manually" onPress={() => setStage('review')} variant="soft" full />
-          {!!photo && <Button label="Retake photo" onPress={() => setStage('camera')} variant="ghost" full />}
         </>
       )}
 
@@ -382,6 +420,13 @@ export default function MealEditor({
 
       {stage === 'review' && (
         <>
+          {!!(photo || remotePhoto) && (
+            <Image
+              source={photo || remotePhoto}
+              style={{ width: '100%', height: 170, borderRadius: 18, backgroundColor: c.soft }}
+              contentFit="cover"
+            />
+          )}
           {result && result.calories > 0 ? (
             <Card style={{ gap: 12, borderColor: c.primarySoft }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -462,8 +507,9 @@ export default function MealEditor({
           />
           {!!photo && (
             <View style={{ flexDirection: 'row', gap: 9 }}>
-              <Button label="Try AI again" onPress={runEstimate} variant="soft" size="sm" icon={<RotateCcw size={14} color={c.ink} />} />
-              <Button label="Retake" onPress={() => setStage('camera')} variant="ghost" size="sm" />
+              <Button label="AI again" onPress={runEstimate} variant="soft" size="sm" style={{ flex: 1 }} icon={<RotateCcw size={14} color={c.ink} />} />
+              <Button label="Retake" onPress={takePhoto} variant="ghost" size="sm" style={{ flex: 1 }} />
+              <Button label="Gallery" onPress={pickFromGallery} variant="ghost" size="sm" style={{ flex: 1 }} />
             </View>
           )}
         </>
@@ -509,6 +555,32 @@ function FoodSource({ value, onChange, penalty }: { value: boolean; onChange: (v
         tone="warning"
       />
     </View>
+  );
+}
+
+function PickOption({
+  icon, soft, title, hint, onPress, disabled
+}: {
+  icon: ReactNode;
+  soft: string;
+  title: string;
+  hint: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <PressableScale onPress={onPress} disabled={disabled}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 13, padding: 16, backgroundColor: c.surface, borderRadius: 18, borderWidth: 1.5, borderColor: c.line }}>
+        <View style={{ width: 46, height: 46, borderRadius: 15, backgroundColor: soft, alignItems: 'center', justifyContent: 'center' }}>
+          {icon}
+        </View>
+        <View style={{ flex: 1, gap: 2 }}>
+          <T variant="bodyStrong">{title}</T>
+          <T variant="meta" tone="muted">{hint}</T>
+        </View>
+        <ChevronRight size={18} color={c.faint} />
+      </View>
+    </PressableScale>
   );
 }
 

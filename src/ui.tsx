@@ -1,14 +1,14 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import {
   ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable as RNPressable,
-  ScrollView, StyleSheet, Text as RNText, TextInput, View,
+  ScrollView, StyleSheet, Text as RNText, TextInput, useWindowDimensions, View,
   type StyleProp, type TextInputProps, type TextStyle, type ViewStyle
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Easing, ReduceMotion, SlideInDown, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming
 } from 'react-native-reanimated';
-import { Check, ChevronRight, X } from 'lucide-react-native';
+import { Check, X } from 'lucide-react-native';
 import { c, font, radius, shadow, questPalette } from './theme';
 import { iconForQuest, type IconComponent } from './icons';
 
@@ -496,23 +496,37 @@ export function Sheet({
   scrollable?: boolean;
 }) {
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   if (!visible) return null;
+  // A numeric cap avoids the percentage-height quirk that made the sheet
+  // shrink below its content and clip the last controls.
+  const maxHeight = Math.max(320, height - Math.max(insets.top, 24) - 36);
   return (
-    <Modal transparent visible animationType="fade" onRequestClose={onClose} statusBarTranslucent>
+    <Modal
+      transparent
+      visible
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <RNPressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close sheet">
           <View style={{ flex: 1, backgroundColor: c.overlay }} />
         </RNPressable>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={{ width: '100%' }}
+        >
           <Animated.View
             entering={SlideInDown.duration(270).reduceMotion(ReduceMotion.System)}
             style={{
               width: '100%',
-              maxHeight: '90%',
+              maxHeight,
               backgroundColor: c.surface,
               borderTopLeftRadius: 30,
               borderTopRightRadius: 30,
-              paddingBottom: Math.max(insets.bottom, 12),
+              paddingBottom: Math.max(insets.bottom, 14),
               ...shadow.sheet
             }}
           >
@@ -529,8 +543,10 @@ export function Sheet({
             {scrollable ? (
               <ScrollView
                 keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
                 showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 12, gap: 14 }}
+                style={{ flexGrow: 0, flexShrink: 1 }}
+                contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 10, gap: 14 }}
               >
                 {children}
               </ScrollView>
