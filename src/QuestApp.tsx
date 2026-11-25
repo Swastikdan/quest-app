@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator, Alert, AppState, RefreshControl, View
+  ActivityIndicator, Alert, AppState, Platform, RefreshControl, View
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,7 +10,7 @@ import * as Notifications from 'expo-notifications';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { File, Paths } from 'expo-file-system';
-import { Plus } from 'lucide-react-native';
+import { Download, Plus, X } from 'lucide-react-native';
 import {
   api, enqueue, flush, loadConnection, saveConnection, type Connection
 } from './api';
@@ -31,9 +31,10 @@ import {
 import { syncUsage, usage } from './usage';
 import { setBackgroundUsage } from './background';
 import { c, shadow } from './theme';
+import { checkForUpdate, downloadAndInstall, type UpdateInfo } from './update';
 import { tabIcons } from './icons';
 import {
-  Button, Card, LogoMark, PressableScale, Screen, Sheet, T
+  Button, Card, IconTile, LogoMark, PressableScale, Screen, Sheet, T
 } from './ui';
 import type { Day, Meal, MealType, Quest, StatsData } from './types';
 
@@ -71,6 +72,9 @@ export default function QuestApp() {
   const [reminderList, setReminderList] = useState<Reminder[]>([]);
   const [device, setDevice] = useState('');
   const [usageEnabled, setUsageEnabled] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState<UpdateInfo | null>(null);
+  const [updateBusy, setUpdateBusy] = useState(false);
+  const updateCheckedAt = useRef(0);
   const latest = useRef(0);
   const checks = useRef(new Set<number>());
   const graceShown = useRef('');
@@ -98,6 +102,47 @@ export default function QuestApp() {
     const id = setTimeout(() => setNotice(''), 2600);
     return () => clearTimeout(id);
   }, [notice]);
+
+  const checkUpdates = useCallback(async () => {
+    if (Platform.OS !== 'android') return;
+    if (Date.now() - updateCheckedAt.current < 5 * 60_000) return;
+    updateCheckedAt.current = Date.now();
+    try {
+      const result = await checkForUpdate();
+      if (!result.available || !result.info) return;
+      const dismissed = await AsyncStorage.getItem('quest.update.dismissed');
+      if (dismissed !== result.info.version) setUpdateInfo(result.info);
+    } catch {
+      // Quiet: a failed update check should never interrupt the day.
+    }
+  }, []);
+
+  useEffect(() => {
+    void checkUpdates();
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') void checkUpdates();
+    });
+    return () => sub.remove();
+  }, [checkUpdates]);
+
+  async function installUpdate() {
+    if (!updateInfo || updateBusy) return;
+    setUpdateBusy(true);
+    try {
+      await downloadAndInstall(updateInfo);
+      setUpdateInfo(null);
+    } catch (caught) {
+      setNotice(caught instanceof Error ? caught.message : 'Could not open the installer.');
+    } finally {
+      setUpdateBusy(false);
+    }
+  }
+
+  async function dismissUpdate() {
+    const version = updateInfo?.version;
+    setUpdateInfo(null);
+    if (version) await AsyncStorage.setItem('quest.update.dismissed', version).catch(() => {});
+  }
 
   const refresh = useCallback(async (sync = false) => {
     if (!connection) return;
@@ -483,6 +528,38 @@ export default function QuestApp() {
                 serverUrl={connection.url}
               />
             </Screen>
+          )}
+
+          {updateInfo && (
+            <View style={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 6 }}>
+              <PressableScale
+                onPress={() => { void installUpdate(); }}
+                disabled={updateBusy}
+                accessibilityLabel={`Install Quest ${updateInfo.version}`}
+                style={{ borderRadius: 18 }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 11, backgroundColor: c.primarySoft, borderRadius: 18, padding: 11 }}>
+                  <IconTile component={Download} size={36} bg={c.white} color={c.primary} iconSize={17} />
+                  <View style={{ flex: 1, gap: 1 }}>
+                    <T variant="bodyStrong">Quest v{updateInfo.version} is ready</T>
+                    <T variant="caption" tone="primary">
+                      {updateBusy ? 'Downloading the build…' : 'Tap to install over this version'}
+                    </T>
+                  </View>
+                  {updateBusy ? (
+                    <ActivityIndicator size="small" color={c.primary} />
+                  ) : (
+                    <PressableScale
+                      onPress={() => { void dismissUpdate(); }}
+                      accessibilityLabel="Dismiss update"
+                      style={{ width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: c.white }}
+                    >
+                      <X size={15} color={c.primary} strokeWidth={2.4} />
+                    </PressableScale>
+                  )}
+                </View>
+              </PressableScale>
+            </View>
           )}
 
           <TabBar tab={tab} setTab={setTab} onAdd={() => setSheet({ kind: 'quick' })} bottom={insets.bottom} />

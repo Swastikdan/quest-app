@@ -35,7 +35,19 @@ export async function checkForUpdate(): Promise<{
 }> {
   const current = currentVersion();
   if (Platform.OS !== 'android') return { supported: false, available: false, current };
-  const response = await fetch(MANIFEST_URL, { headers: { 'cache-control': 'no-cache' } });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12_000);
+  let response: Response;
+  try {
+    response = await fetch(MANIFEST_URL, {
+      headers: { 'cache-control': 'no-cache' },
+      signal: controller.signal
+    });
+  } catch {
+    throw new Error('Couldn’t reach GitHub. Check your connection and try again.');
+  } finally {
+    clearTimeout(timeout);
+  }
   if (!response.ok) {
     throw new Error('No published build found yet. Run the GitHub release workflow first.');
   }

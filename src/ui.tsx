@@ -1,8 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
-  ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable as RNPressable,
-  ScrollView, StyleSheet, Text as RNText, TextInput, useWindowDimensions, View,
-  type StyleProp, type TextInputProps, type TextStyle, type ViewStyle
+  ActivityIndicator, findNodeHandle, Keyboard, Modal, Platform, Pressable as RNPressable,
+  ScrollView, StyleSheet, Text as RNText, TextInput, UIManager, useWindowDimensions, View,
+  type ScrollViewInstance, type StyleProp, type TextInputInstance, type TextInputProps, type TextStyle, type ViewStyle
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -14,6 +14,7 @@ import { iconForQuest, type IconComponent } from './icons';
 
 const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 const AnimatedPressable = Animated.createAnimatedComponent(RNPressable);
+const SheetScrollContext = createContext<((nodeHandle: number) => void) | null>(null);
 
 type PressProps = {
   children: ReactNode;
@@ -359,9 +360,11 @@ export function SectionHeader({ title, action }: { title: string; action?: React
 }
 
 export function Field({
-  label, suffix, multiline, containerStyle, ...props
+  label, suffix, multiline, containerStyle, onFocus, onBlur, ...props
 }: TextInputProps & { label: string; suffix?: string; containerStyle?: StyleProp<ViewStyle> }) {
   const [focused, setFocused] = useState(false);
+  const input = useRef<TextInputInstance>(null);
+  const reveal = useContext(SheetScrollContext);
   return (
     <View style={[{ gap: 7 }, containerStyle]}>
       <T variant="caption" tone="muted">{label}</T>
@@ -379,11 +382,17 @@ export function Field({
       >
         <TextInput
           {...props}
+          ref={input}
           multiline={multiline}
           placeholderTextColor={c.faint}
           selectionColor={c.primary}
-          onFocus={(event) => { setFocused(true); props.onFocus?.(event); }}
-          onBlur={(event) => { setFocused(false); props.onBlur?.(event); }}
+          onFocus={(event) => {
+            setFocused(true);
+            onFocus?.(event);
+            const node = findNodeHandle(input.current);
+            if (node != null) reveal?.(node);
+          }}
+          onBlur={(event) => { setFocused(false); onBlur?.(event); }}
           style={{
             flex: 1,
             fontFamily: font.medium,
@@ -497,10 +506,61 @@ export function Sheet({
 }) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
+  const scrollRef = useRef<ScrollViewInstance>(null);
+  const scrollY = useRef(0);
+  const focusedNode = useRef<number | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(0);
+
+  useEffect(() => {
+    const show = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (event) => setKeyboardHeight(event.endCoordinates.height)
+    );
+    const hide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => setKeyboardHeight(0)
+    );
+    return () => { show.remove(); hide.remove(); };
+  }, []);
+
+  useEffect(() => {
+    if (!visible) setKeyboardHeight(0);
+  }, [visible]);
+
+  const reveal = useCallback((node: number) => {
+    focusedNode.current = node;
+    const revealNode = () => {
+      const scroll = scrollRef.current;
+      const inner = scroll?.getInnerViewNode();
+      if (!scroll || inner == null || viewportHeight <= 0) return;
+      UIManager.measureLayout(node, inner, () => {}, (_x, y, _width, nodeHeight) => {
+        const top = scrollY.current;
+        const bottom = top + viewportHeight;
+        const margin = 24;
+        if (y + nodeHeight > bottom - margin) {
+          scroll.scrollTo({ y: Math.max(0, y + nodeHeight + margin - viewportHeight), animated: true });
+        } else if (y < top + margin) {
+          scroll.scrollTo({ y: Math.max(0, y - margin), animated: true });
+        }
+      });
+    };
+    setTimeout(revealNode, 60);
+    setTimeout(revealNode, 320);
+  }, [viewportHeight]);
+
+  useEffect(() => {
+    if (keyboardHeight <= 0) return;
+    const id = setTimeout(() => {
+      if (focusedNode.current != null) reveal(focusedNode.current);
+    }, 80);
+    return () => clearTimeout(id);
+  }, [keyboardHeight, reveal]);
+
   if (!visible) return null;
   // A numeric cap avoids the percentage-height quirk that made the sheet
   // shrink below its content and clip the last controls.
-  const maxHeight = Math.max(320, height - Math.max(insets.top, 24) - 36);
+  const maxHeight = Math.max(260, height - Math.max(insets.top, 24) - 36 - keyboardHeight);
   return (
     <Modal
       transparent
@@ -514,10 +574,7 @@ export function Sheet({
         <RNPressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Close sheet">
           <View style={{ flex: 1, backgroundColor: c.overlay }} />
         </RNPressable>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={{ width: '100%' }}
-        >
+        <View style={{ width: '100%', paddingBottom: keyboardHeight }}>
           <Animated.View
             entering={SlideInDown.duration(270).reduceMotion(ReduceMotion.System)}
             style={{
@@ -526,7 +583,7 @@ export function Sheet({
               backgroundColor: c.surface,
               borderTopLeftRadius: 30,
               borderTopRightRadius: 30,
-              paddingBottom: Math.max(insets.bottom, 14),
+              paddingBottom: keyboardHeight > 0 ? 12 : Math.max(insets.bottom, 14),
               ...shadow.sheet
             }}
           >
@@ -540,24 +597,30 @@ export function Sheet({
                 <X size={18} color={c.ink} strokeWidth={2.4} />
               </PressableScale>
             </View>
-            {scrollable ? (
-              <ScrollView
-                keyboardShouldPersistTaps="handled"
-                keyboardDismissMode="on-drag"
-                showsVerticalScrollIndicator={false}
-                style={{ flexGrow: 0, flexShrink: 1 }}
-                contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 10, gap: 14 }}
-              >
-                {children}
-              </ScrollView>
-            ) : (
-              <View style={{ paddingHorizontal: 20, gap: 14 }}>{children}</View>
-            )}
+            <SheetScrollContext.Provider value={reveal}>
+              {scrollable ? (
+                <ScrollView
+                  ref={scrollRef}
+                  keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode="on-drag"
+                  showsVerticalScrollIndicator={false}
+                  style={{ flexGrow: 0, flexShrink: 1 }}
+                  onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}
+                  onScroll={(event) => { scrollY.current = event.nativeEvent.contentOffset.y; }}
+                  scrollEventThrottle={16}
+                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 10, gap: 14 }}
+                >
+                  {children}
+                </ScrollView>
+              ) : (
+                <View style={{ paddingHorizontal: 20, gap: 14 }}>{children}</View>
+              )}
+            </SheetScrollContext.Provider>
             {footer ? (
               <View style={{ paddingHorizontal: 20, paddingTop: 10 }}>{footer}</View>
             ) : null}
           </Animated.View>
-        </KeyboardAvoidingView>
+        </View>
       </View>
     </Modal>
   );
